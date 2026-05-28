@@ -1,0 +1,80 @@
+[0.005s] Invoking command in '/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent': CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/src/micro-ROS-Agent/micro_ros_agent -DCMAKE_INSTALL_PREFIX=/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/install/micro_ros_agent
+[0.067s] -- The C compiler identification is GNU 11.4.0
+[0.072s] -- Detecting C compiler ABI info
+[0.126s] -- Detecting C compiler ABI info - done
+[0.135s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.135s] -- Detecting C compile features
+[0.135s] -- Detecting C compile features - done
+[0.170s] -- The CXX compiler identification is GNU 11.4.0
+[0.174s] -- Detecting CXX compiler ABI info
+[0.225s] -- Detecting CXX compiler ABI info - done
+[0.231s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.231s] -- Detecting CXX compile features
+[0.231s] -- Detecting CXX compile features - done
+[0.252s] -- Configuring done
+[0.254s] -- Generating done
+[0.255s] -- Build files have been written to: /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent
+[0.258s] Invoked command in '/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent' returned '0': CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/src/micro-ROS-Agent/micro_ros_agent -DCMAKE_INSTALL_PREFIX=/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/install/micro_ros_agent
+[0.259s] Invoking command in '/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent': CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent -- -j8 -l8
+[0.287s] [  6%] [34m[1mCreating directories for 'xrceagent'[0m
+[0.335s] [ 12%] [34m[1mPerforming download step (git clone) for 'xrceagent'[0m
+[0.347s] 正克隆到 'xrceagent'...
+[3.936s] HEAD 目前位于 57d0862 Release v2.4.2
+[3.970s] [ 18%] [34m[1mPerforming update step for 'xrceagent'[0m
+[3.984s] [ 25%] [34m[1mNo patch step for 'xrceagent'[0m
+[3.999s] [ 31%] [34m[1mPerforming configure step for 'xrceagent'[0m
+[4.005s] loading initial cache file /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent/agent/tmp/xrceagent-cache-.cmake
+[4.043s] -- The C compiler identification is GNU 11.4.0
+[4.049s] -- Detecting C compiler ABI info
+[4.093s] -- Detecting C compiler ABI info - done
+[4.098s] -- Check for working C compiler: /usr/bin/cc - skipped
+[4.098s] -- Detecting C compile features
+[4.098s] -- Detecting C compile features - done
+[4.133s] -- The CXX compiler identification is GNU 11.4.0
+[4.137s] -- Detecting CXX compiler ABI info
+[4.197s] -- Detecting CXX compiler ABI info - done
+[4.202s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[4.202s] -- Detecting CXX compile features
+[4.203s] -- Detecting CXX compile features - done
+[4.205s] -- Looking for pthread.h
+[4.262s] -- Looking for pthread.h - found
+[4.262s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[4.316s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[4.316s] -- Found Threads: TRUE  
+[4.323s] -- Configuring done
+[4.325s] -- Generating done
+[4.325s] -- Build files have been written to: /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent/agent/src/xrceagent-build
+[4.338s] [ 37%] [34m[1mPerforming build step for 'xrceagent'[0m
+[4.365s] [ 12%] [34m[1mCreating directories for 'uagent'[0m
+[4.413s] [ 25%] [34m[1mNo download step for 'uagent'[0m
+[4.428s] [ 37%] [34m[1mNo update step for 'uagent'[0m
+[4.442s] [ 50%] [34m[1mNo patch step for 'uagent'[0m
+[4.460s] [ 62%] [34m[1mPerforming configure step for 'uagent'[0m
+[4.465s] loading initial cache file /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent/agent/src/xrceagent-build/uagent-prefix/tmp/uagent-cache-.cmake
+[4.468s] -- Setting build type to 'Release' as none was specified.
+[4.474s] [31mCMake Error at CMakeLists.txt:153 (find_package):
+[4.474s]   By not providing "Findfastcdr.cmake" in CMAKE_MODULE_PATH this project has
+[4.475s]   asked CMake to find a package configuration file provided by "fastcdr", but
+[4.475s]   CMake did not find one.
+[4.475s] 
+[4.475s]   Could not find a package configuration file provided by "fastcdr"
+[4.475s]   (requested version 1) with any of the following names:
+[4.475s] 
+[4.475s]     fastcdrConfig.cmake
+[4.475s]     fastcdr-config.cmake
+[4.475s] 
+[4.475s]   Add the installation prefix of "fastcdr" to CMAKE_PREFIX_PATH or set
+[4.475s]   "fastcdr_DIR" to a directory containing one of the above files.  If
+[4.475s]   "fastcdr" provides a separate development package or SDK, be sure it has
+[4.475s]   been installed.
+[4.475s] 
+[4.475s] [0m
+[4.475s] -- Configuring incomplete, errors occurred!
+[4.475s] See also "/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent/agent/src/xrceagent-build/CMakeFiles/CMakeOutput.log".
+[4.475s] gmake[5]: *** [CMakeFiles/uagent.dir/build.make:93：uagent-prefix/src/uagent-stamp/uagent-configure] 错误 1
+[4.475s] gmake[4]: *** [CMakeFiles/Makefile2:83：CMakeFiles/uagent.dir/all] 错误 2
+[4.476s] gmake[3]: *** [Makefile:91：all] 错误 2
+[4.476s] gmake[2]: *** [CMakeFiles/xrceagent.dir/build.make:86：agent/src/xrceagent-stamp/xrceagent-build] 错误 2
+[4.476s] gmake[1]: *** [CMakeFiles/Makefile2:85：CMakeFiles/xrceagent.dir/all] 错误 2
+[4.476s] gmake: *** [Makefile:91：all] 错误 2
+[4.477s] Invoked command in '/home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent' returned '2': CONDA_PROMPT_MODIFIER=(base) /usr/bin/cmake --build /home/wyyyz/TJ/ROS_SLAM/lidar/lidar/build/micro_ros_agent -- -j8 -l8

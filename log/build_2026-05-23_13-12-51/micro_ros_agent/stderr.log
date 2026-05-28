@@ -1,0 +1,20 @@
+[31mCMake Error at CMakeLists.txt:153 (find_package):
+  By not providing "Findfastcdr.cmake" in CMAKE_MODULE_PATH this project has
+  asked CMake to find a package configuration file provided by "fastcdr", but
+  CMake did not find one.
+
+  Could not find a package configuration file provided by "fastcdr"
+  (requested version 1) with any of the following names:
+
+    fastcdrConfig.cmake
+    fastcdr-config.cmake
+
+  Add the installation prefix of "fastcdr" to CMAKE_PREFIX_PATH or set
+  "fastcdr_DIR" to a directory containing one of the above files.  If
+  "fastcdr" provides a separate development package or SDK, be sure it has
+  been installed.
+
+[0m
+gmake[2]: *** [CMakeFiles/xrceagent.dir/build.make:93：agent/src/xrceagent-stamp/xrceagent-configure] 错误 1
+gmake[1]: *** [CMakeFiles/Makefile2:85：CMakeFiles/xrceagent.dir/all] 错误 2
+gmake: *** [Makefile:91：all] 错误 2
