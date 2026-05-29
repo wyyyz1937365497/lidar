@@ -1,89 +1,60 @@
 #include <Arduino.h>
-#include <Wire.h>
+#include <BitBang_I2C.h>
 
-// ================= I2C 配置 =================
-// MT6701 默认 7位 I2C 地址为 0x06（部分模块可能固定为 0x36 或 0x1A）
-const uint8_t MT6701_I2C_ADDR = 0x06;
+// MT6701 编码器配置
+#define MT6701_ADDR 0x06
+#define REG_ANGLE_MSB 0x03
+#define MAX_ANGLE_VALUE 16384.0f
 
-// 角度寄存器地址（官方数据手册定义）
-const uint8_t REG_ANGLE_MSB = 0x03; // 高8位寄存器
-const uint8_t REG_ANGLE_LSB = 0x04; // 低6位寄存器
+// 接在刚才测试 MPU6050 的引脚上
+#define SDA_PIN 7
+#define SCL_PIN 6
 
-// MT6701 为 14bit 分辨率，满量程值为 16384 (2^14)
-const float MAX_ANGLE_VALUE = 16384.0;
-
-// ESP32-S3 DevKitC-1 常用 I2C 引脚（可根据实际接线修改）
-const int I2C_SDA = 11;
-const int I2C_SCL = 0;
-
-// const int ENC_SDA[4] = {1, 8, 11, 45}; // FL, FR, RL, RR
-// const int ENC_SCL[4] = {2, 3, 0, 46};
+BBI2C myI2C;
 
 void setup()
 {
   Serial.begin(115200);
-  delay(500); // 等待串口稳定
+  delay(2000);
+  Serial.println("=== MT6701 软件I2C读取测试 (引脚 7/6) ===\n");
 
-  // 初始化 I2C
-  Wire.begin(I2C_SDA, I2C_SCL);
-  Wire.setClock(100000); // 400kHz 高速模式
+  // 初始化总线
+  memset(&myI2C, 0, sizeof(myI2C));
+  myI2C.iSDA = SDA_PIN;
+  myI2C.iSCL = SCL_PIN;
+  myI2C.bWire = 0;          // BitBang 模式
+  I2CInit(&myI2C, 100000L); // 100kHz
 
-  // 检测 MT6701 是否在线
-  Wire.beginTransmission(MT6701_I2C_ADDR);
-  if (Wire.endTransmission() == 0)
-  {
-    Serial.println("✅ MT6701 设备已就绪！");
-  }
-  else
-  {
-    Serial.println("❌ 错误：未检测到 MT6701，请检查接线或 I2C 地址！");
-    while (1)
-      delay(1000); // 暂停运行
-  }
-
-  Serial.println("========================================");
-  Serial.println("MT6701 I2C 绝对角度读取程序");
-  Serial.println("请转动磁环或磁铁...");
-  Serial.println("========================================");
+  Serial.printf("总线初始化完成 (SDA:%d, SCL:%d)\n", SDA_PIN, SCL_PIN);
+  Serial.println("正在读取 MT6701 角度...\n");
 }
 
 void loop()
 {
-  // 1. 发送寄存器指针
-  Wire.beginTransmission(MT6701_I2C_ADDR);
-  Wire.write(REG_ANGLE_MSB);
-  if (Wire.endTransmission(false) != 0)
+  uint8_t buf[2];
+
+  // 读取 MT6701 寄存器 0x03，读取 2 字节
+  int bytesRead = I2CReadRegister(&myI2C, MT6701_ADDR, REG_ANGLE_MSB, buf, 2);
+
+  if (bytesRead == 2)
   {
-    Serial.println("⚠️ I2C 写入失败");
-    delay(100);
-    return;
+    // 数据解析：14-bit 分辨率
+    // buf[0] 是高 8 位，buf[1] 是低 6 位
+    uint16_t rawAngle = (buf[0] << 6) | (buf[1] & 0x3F);
+    float angle = (rawAngle / MAX_ANGLE_VALUE) * 360.0f;
+
+    Serial.printf("✅ 读取成功 | Raw: [0x%02X, 0x%02X] -> Angle: %.2f°\n", buf[0], buf[1], angle);
+
+    // 简单的跳变检测提示
+    if (rawAngle == 0 || rawAngle == 16383)
+    {
+      Serial.println("  ⚠️ 注意: Raw 值接近极限 (0或16383)，可能未连接或数据异常");
+    }
+  }
+  else
+  {
+    Serial.printf("❌ 读取失败 (返回: %d) | 请检查 MT6701 接线 (3.3V, GND, SDA, SCL)\n", bytesRead);
   }
 
-  // 2. 读取 2 个字节数据
-  uint8_t bytesRead = Wire.requestFrom(MT6701_I2C_ADDR, (uint8_t)2);
-  if (bytesRead != 2)
-  {
-    Serial.println("⚠️ I2C 读取失败");
-    delay(100);
-    return;
-  }
-
-  uint8_t msb = Wire.read();
-  uint8_t lsb = Wire.read();
-
-  // 3. 合并为 14bit 原始值
-  // MSB 占高8位，LSB 仅低6位有效（高2位为状态位）
-  uint16_t rawAngle = (msb << 6) | (lsb & 0x3F);
-
-  // 4. 转换为角度 (0.00 ~ 360.00)
-  float angle = (rawAngle / MAX_ANGLE_VALUE) * 360.0;
-
-  // 5. 串口打印
-  Serial.print("原始值(14bit): ");
-  Serial.print(rawAngle);
-  Serial.print("\t角度: ");
-  Serial.print(angle, 2);
-  Serial.println(" °");
-
-  delay(50); // 约 20Hz 采样率
+  delay(100);
 }
