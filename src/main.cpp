@@ -1,114 +1,107 @@
-/**
- * @file main.cpp
- * @brief MPU6500/9250 最小化 I2C 诊断程序 (使用 Wire1)
- *        目的：测试 Adafruit 库 + Wire1 是否能正常初始化
- */
-
 #include <Arduino.h>
-#include <Wire.h>
-#include <Adafruit_MPU6050.h>
-#include <Adafruit_Sensor.h>
+#include <ESP32Servo.h>
 
-#define I2C_SDA 45
-#define I2C_SCL 46
+// 定义舵机引脚（与你的主程序一致）
+#define STEERING_SERVO_PIN 18
 
-Adafruit_MPU6050 mpu;
+Servo testServo;
+
+// 当前舵机角度 (默认从中位90度开始，标准舵机范围0-180度)
+int currentAngle = 45;
 
 void setup()
 {
   Serial.begin(115200);
-  delay(2000); // 等待串口监视器打开
-  Serial.println("\n========================================");
-  Serial.println("🔧 MPU6500/9250 Wire1 最小化测试");
-  Serial.println("========================================\n");
+  delay(1000);
 
-  // 1. 初始化 Wire1 并降频到 100kHz
-  Serial.println("[步骤1] 初始化 Wire1 (SDA=45, SCL=46, 100kHz)...");
-  Wire1.begin(I2C_SDA, I2C_SCL, 100000);
+  // 配置舵机参数（与主程序一致）
+  testServo.setPeriodHertz(50);
+  testServo.attach(STEERING_SERVO_PIN, 500, 2500);
 
-  // 2. 手动唤醒 MPU
-  Serial.println("[步骤2] 尝试手动唤醒 MPU...");
-  Wire1.beginTransmission(0x68);
-  Wire1.write(0x6B); // PWR_MGMT_1 寄存器
-  Wire1.write(0x00); // 清除睡眠位
-  uint8_t error = Wire1.endTransmission();
-
-  if (error == 0)
-  {
-    Serial.println("✅ 手动唤醒成功");
-  }
-  else
-  {
-    Serial.printf("❌ 手动唤醒失败, I2C 错误码: %d\n", error);
-  }
-  delay(100);
-
-  // 3. 底层诊断：检查 WHO_AM_I (验证 Wire1 读写正常)
-  Serial.println("[步骤3] 底层读取 WHO_AM_I 寄存器...");
-  Wire1.beginTransmission(0x68);
-  Wire1.write(0x75);
-  Wire1.endTransmission(false);
-  Wire1.requestFrom(0x68, (uint8_t)1);
-  if (Wire1.available())
-  {
-    uint8_t who_am_i = Wire1.read();
-    Serial.printf("✅ WHO_AM_I 读取成功: 0x%02X (期望 0x70)\n", who_am_i);
-  }
-  else
-  {
-    Serial.println("❌ WHO_AM_I 读取失败，I2C 总线可能已死锁");
-  }
-
-  // 4. 启动 Adafruit 库 (传入 &Wire1)
-  Serial.println("[步骤4] 尝试初始化 Adafruit MPU6050 库 (传入 &Wire1)...");
-  if (!mpu.begin(0x68, &Wire1))
-  {
-    Serial.println("❌ Adafruit 库初始化失败！");
-    Serial.println("👉 结论：Adafruit 库内部可能与 Wire1 存在兼容性问题，建议使用纯 Wire1 手写驱动。");
-  }
-  else
-  {
-    Serial.println("✅ Adafruit 库初始化成功！");
-
-    // 5. SLAM 专用量程配置
-    mpu.setAccelerometerRange(MPU6050_RANGE_4_G);
-    mpu.setGyroRange(MPU6050_RANGE_500_DEG);
-    mpu.setFilterBandwidth(MPU6050_BAND_44_HZ);
-    Serial.println("✅ 已配置 SLAM 优化量程 (±4G, ±500°/s, 44Hz BW)");
-  }
+  // 先回到中位
+  testServo.write(currentAngle);
 
   Serial.println("\n========================================");
-  Serial.println("🚀 开始循环读取数据...");
-  Serial.println("========================================\n");
+  Serial.println("🔧 舵机串口调试工具已启动");
+  Serial.println("========================================");
+  Serial.println("📌 指令说明:");
+  Serial.println(" - 输入 0~180 之间的数字，舵机转到对应绝对角度");
+  Serial.println(" - 输入 'a' 或 'A'，角度减少 1 度 (微调左转)");
+  Serial.println(" - 输入 'd' 或 'D'，角度增加 1 度 (微调右转)");
+  Serial.println(" - 输入 'q' 或 'Q'，角度减少 5 度 (快调左转)");
+  Serial.println(" - 输入 'e' 或 'E'，角度增加 5 度 (快调右转)");
+  Serial.println(" - 输入 'c' 或 'C'，回到中位 (90度)");
+  Serial.println("========================================");
+  Serial.printf("🎯 当前角度: %d°\n", currentAngle);
+  Serial.println("请输入指令:");
 }
 
 void loop()
 {
-  sensors_event_t a, g, temp;
-
-  // 如果库初始化成功，使用库读取
-  if (mpu.getEvent(&a, &g, &temp))
+  if (Serial.available() > 0)
   {
-    Serial.printf("Accel -> X: %6.2f, Y: %6.2f, Z: %6.2f m/s^2 | ", a.acceleration.x, a.acceleration.y, a.acceleration.z);
-    Serial.printf("Gyro -> X: %6.2f, Y: %6.2f, Z: %6.2f rad/s | ", g.gyro.x, g.gyro.y, g.gyro.z);
-    Serial.printf("Temp: %.2f C\n", temp.temperature);
-  }
-  else
-  {
-    Serial.println("❌ Adafruit 库读取数据失败");
+    String input = Serial.readStringUntil('\n');
+    input.trim(); // 去除首尾空格和换行符
 
-    // 如果库失败，尝试底层直接读取，确认芯片没死
-    Wire1.beginTransmission(0x68);
-    Wire1.write(0x3B);
-    if (Wire1.endTransmission(false) == 0)
+    if (input.length() == 0)
+      return;
+
+    // 1. 处理单字符指令
+    if (input.length() == 1)
     {
-      Serial.println("➡️ 但底层 Wire1 直接通信仍然正常，说明是 Adafruit 库的问题。");
+      char cmd = input.charAt(0);
+      switch (cmd)
+      {
+      case 'a':
+      case 'A':
+        currentAngle -= 1;
+        break;
+      case 'd':
+      case 'D':
+        currentAngle += 1;
+        break;
+      case 'q':
+      case 'Q':
+        currentAngle -= 5;
+        break;
+      case 'e':
+      case 'E':
+        currentAngle += 5;
+        break;
+      case 'c':
+      case 'C':
+        currentAngle = 45;
+        break;
+      default:
+        break;
+      }
     }
+    // 2. 处理数字指令
     else
     {
-      Serial.println("➡️ 底层 Wire1 也断开了，芯片可能已死锁。");
+      int targetAngle = input.toInt();
+      if (targetAngle >= 0 && targetAngle <= 180)
+      {
+        currentAngle = targetAngle;
+      }
+      else
+      {
+        Serial.println("⚠️ 角度超出范围 (0-180)，请重新输入！");
+        return;
+      }
     }
-  }
 
-  delay(100); // 10Hz 刷新
+    // 安全限幅：防止输入数字超出 0-180 损坏舵机
+    currentAngle = constrain(currentAngle, 0, 180);
+
+    // 执行转动
+    testServo.write(currentAngle);
+
+    // 打印反馈
+    Serial.printf("➡️ 舵机角度设置为: %d°\n", currentAngle);
+
+    // 倾斜角度换算提示（假设90度是0度偏角）
+    float steering_offset = currentAngle - 90.0;
+    Serial.printf("   (相对中位偏转: %.1f°)\n", steering_offset);
+  }
 }
