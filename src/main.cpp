@@ -1,107 +1,133 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
 
-// 定义舵机引脚（与你的主程序一致）
+// ==================== 硬件引脚配置 ====================
+const int M_PWM[2] = {21, 20}; 
+const int M_IN1[2] = {14, 16}; 
+const int M_IN2[2] = {15, 17}; 
+const int STBY = 41;
 #define STEERING_SERVO_PIN 18
 
+const int PWM_FREQ = 10000;
+const int PWM_RES = 8;
+
+// 从你之前的标定结果取值
+#define MIN_PWM 46
+#define MAX_PWM 100
+
+// ==================== 全局变量 ====================
 Servo testServo;
 
-// 当前舵机角度 (默认从中位90度开始，标准舵机范围0-180度)
-int currentAngle = 45;
+int servoCenter = 45;  // 初始中位角度 (根据你之前的配置)
+int testPWM = 60;      // 测试用的电机PWM (可在 MIN~MAX 之间调节)
+bool isMoving = false; // 电机运行状态标志
 
-void setup()
-{
-  Serial.begin(115200);
-  delay(1000);
+// ==================== 电机控制函数 ====================
+void setMotor(int index, int pwm_val) {
+  if (index < 0 || index > 1) return;
+  pwm_val = constrain(pwm_val, -MAX_PWM, MAX_PWM);
 
-  // 配置舵机参数（与主程序一致）
-  testServo.setPeriodHertz(50);
-  testServo.attach(STEERING_SERVO_PIN, 500, 2500);
-
-  // 先回到中位
-  testServo.write(currentAngle);
-
-  Serial.println("\n========================================");
-  Serial.println("🔧 舵机串口调试工具已启动");
-  Serial.println("========================================");
-  Serial.println("📌 指令说明:");
-  Serial.println(" - 输入 0~180 之间的数字，舵机转到对应绝对角度");
-  Serial.println(" - 输入 'a' 或 'A'，角度减少 1 度 (微调左转)");
-  Serial.println(" - 输入 'd' 或 'D'，角度增加 1 度 (微调右转)");
-  Serial.println(" - 输入 'q' 或 'Q'，角度减少 5 度 (快调左转)");
-  Serial.println(" - 输入 'e' 或 'E'，角度增加 5 度 (快调右转)");
-  Serial.println(" - 输入 'c' 或 'C'，回到中位 (90度)");
-  Serial.println("========================================");
-  Serial.printf("🎯 当前角度: %d°\n", currentAngle);
-  Serial.println("请输入指令:");
+  if (pwm_val == 0) {
+    digitalWrite(M_IN1[index], LOW);
+    digitalWrite(M_IN2[index], LOW);
+    ledcWrite(index, 0);
+  } else if (pwm_val > 0) {
+    digitalWrite(M_IN1[index], HIGH);
+    digitalWrite(M_IN2[index], LOW);
+    ledcWrite(index, pwm_val);
+  } else {
+    digitalWrite(M_IN1[index], LOW);
+    digitalWrite(M_IN2[index], HIGH);
+    ledcWrite(index, -pwm_val);
+  }
 }
 
-void loop()
-{
-  if (Serial.available() > 0)
-  {
-    String input = Serial.readStringUntil('\n');
-    input.trim(); // 去除首尾空格和换行符
+void stopMotors() {
+  setMotor(0, 0);
+  setMotor(1, 0);
+  isMoving = false;
+}
 
-    if (input.length() == 0)
-      return;
+void driveForward() {
+  setMotor(0, testPWM);
+  setMotor(1, testPWM);
+  isMoving = true;
+}
 
-    // 1. 处理单字符指令
-    if (input.length() == 1)
-    {
-      char cmd = input.charAt(0);
-      switch (cmd)
-      {
-      case 'a':
-      case 'A':
-        currentAngle -= 1;
-        break;
-      case 'd':
-      case 'D':
-        currentAngle += 1;
-        break;
-      case 'q':
-      case 'Q':
-        currentAngle -= 5;
-        break;
-      case 'e':
-      case 'E':
-        currentAngle += 5;
-        break;
-      case 'c':
-      case 'C':
-        currentAngle = 45;
-        break;
-      default:
-        break;
-      }
-    }
-    // 2. 处理数字指令
-    else
-    {
-      int targetAngle = input.toInt();
-      if (targetAngle >= 0 && targetAngle <= 180)
-      {
-        currentAngle = targetAngle;
-      }
-      else
-      {
-        Serial.println("⚠️ 角度超出范围 (0-180)，请重新输入！");
-        return;
-      }
-    }
+void driveBackward() {
+  setMotor(0, -testPWM);
+  setMotor(1, -testPWM);
+  isMoving = true;
+}
 
-    // 安全限幅：防止输入数字超出 0-180 损坏舵机
-    currentAngle = constrain(currentAngle, 0, 180);
+// ==================== Setup & Loop ====================
+void setup() {
+  Serial.begin(115200);
+  delay(500);
 
-    // 执行转动
-    testServo.write(currentAngle);
+  // 初始化电机引脚
+  for (int i = 0; i < 2; ++i) {
+    pinMode(M_IN1[i], OUTPUT);
+    pinMode(M_IN2[i], OUTPUT);
+    digitalWrite(M_IN1[i], LOW);
+    digitalWrite(M_IN2[i], LOW);
+    ledcSetup(i, PWM_FREQ, PWM_RES);
+    ledcAttachPin(M_PWM[i], i);
+    ledcWrite(i, 0);
+  }
+  pinMode(STBY, OUTPUT);
+  digitalWrite(STBY, HIGH); // 启用电机驱动
 
-    // 打印反馈
-    Serial.printf("➡️ 舵机角度设置为: %d°\n", currentAngle);
+  // 初始化舵机
+  testServo.setPeriodHertz(50);
+  testServo.attach(STEERING_SERVO_PIN, 500, 2500);
+  testServo.write(servoCenter);
 
-    // 倾斜角度换算提示（假设90度是0度偏角）
-    float steering_offset = currentAngle - 90.0;
-    Serial.printf("   (相对中位偏转: %.1f°)\n", steering_offset);
+  Serial.println("\n========================================");
+  Serial.println("🔧 舵机中位 & 直行跑偏标定工具");
+  Serial.println("========================================");
+  Serial.println("📌 舵机微调指令:");
+  Serial.println("  'a' : 角度 -1 (左微调)");
+  Serial.println("  'd' : 角度 +1 (右微调)");
+  Serial.println("  'q' : 角度 -5 (左快调)");
+  Serial.println("  'e' : 角度 +5 (右快调)");
+  Serial.println("📌 电机控制指令:");
+  Serial.println("  'w' : 前进 (保持按住或单次触发)");
+  Serial.println("  's' : 后退");
+  Serial.println("  'x' : 停止电机 🛑");
+  Serial.println("📌 速度调整指令:");
+  Serial.println("  '+' : 增加测试PWM (+5)");
+  Serial.println("  '-' : 降低测试PWM (-5)");
+  Serial.println("========================================");
+  Serial.printf("🎯 当前舵机中位: %d° | 当前测试PWM: %d\n", servoCenter, testPWM);
+  Serial.println("准备就绪！请调整舵机直到车轮正向前方。\n");
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    char cmd = Serial.read();
+    
+    // 舵机调整
+    if (cmd == 'a' || cmd == 'A') servoCenter -= 1;
+    else if (cmd == 'd' || cmd == 'D') servoCenter += 1;
+    else if (cmd == 'q' || cmd == 'Q') servoCenter -= 5;
+    else if (cmd == 'e' || cmd == 'E') servoCenter += 5;
+    
+    // 电机控制
+    else if (cmd == 'w' || cmd == 'W') driveForward();
+    else if (cmd == 's' || cmd == 'S') driveBackward();
+    else if (cmd == 'x' || cmd == 'X') stopMotors();
+    
+    // 速度调整
+    else if (cmd == '+' || cmd == '=') testPWM = constrain(testPWM + 5, MIN_PWM, MAX_PWM);
+    else if (cmd == '-' || cmd == '_') testPWM = constrain(testPWM - 5, MIN_PWM, MAX_PWM);
+
+    // 更新并限制舵机角度
+    servoCenter = constrain(servoCenter, 0, 180);
+    testServo.write(servoCenter);
+
+    // 打印当前状态
+    Serial.printf("🎯 舵机角度: %d° | ⚡测试PWM: %d | 🚗 电机: %s\n", 
+                  servoCenter, testPWM, isMoving ? "运行中" : "已停止");
   }
 }
